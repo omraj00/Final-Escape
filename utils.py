@@ -53,6 +53,47 @@ def _create_chain_stream_generator(chain: LLMChain, inputs: dict, token_queue: Q
 
 load_dotenv()
 
+def generate_initial_plot_blocking(character, theme):
+    """Generates the initial story plot as a complete string (blocking)."""
+    token_queue = Queue()
+    llm = ChatOpenAI(
+        temperature=0.7,
+        streaming=True, # Still True for callback to work
+        callbacks=[TokenStreamCallbackHandler(token_queue)]
+    )
+    
+    template = """You are a creative storyteller. Craft an intriguing opening for a comic story.
+    The story features a character named {character} and revolves around the theme of {theme}.
+    Introduce the setting and {character}, and hint at an impending event or challenge related to the {theme}.
+    Keep the plot engaging and around 100-150 words.
+
+    Story Opening:"""
+    
+    prompt = PromptTemplate(
+        input_variables=["character", "theme"],
+        template=template
+    )
+    story_chain = LLMChain(llm=llm, prompt=prompt)
+    inputs = {"character": character, "theme": theme}
+
+    # Run in a thread so UI doesn't freeze, but collect all tokens here
+    thread = threading.Thread(target=lambda: story_chain.run(inputs))
+    thread.start()
+
+    full_response_chunks = []
+    while True:
+        try:
+            token = token_queue.get(timeout=1) # Adjust timeout as needed
+            if token is None: # End of stream signal
+                break
+            full_response_chunks.append(token)
+        except Empty:
+            if not thread.is_alive() and token_queue.empty():
+                break
+            continue
+    thread.join()
+    return "".join(full_response_chunks)
+
 def generate_initial_plot_stream(character, theme):
     """Generates the initial story plot as a stream of tokens using callbacks."""
     token_queue = Queue()
