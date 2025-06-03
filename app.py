@@ -1,9 +1,9 @@
 import streamlit as st
 from utils import (
-    generate_initial_plot_stream,
-    generate_continuation_stream,
+    generate_initial_plot_blocking, # For initial plot
+    generate_continuation_stream,   # For continuations
     generate_comic_image,
-    format_story_history # Ensure this formats history as a simple string
+    format_story_history
 )
 import os
 import time
@@ -148,14 +148,7 @@ with st.sidebar:
         st.balloons()
 
 
-# Helper function to capture stream and full text
-def stream_and_capture(stream_generator):
-    full_response_chunks = []
-    def wrapped_generator():
-        for chunk in stream_generator:
-            full_response_chunks.append(chunk)
-            yield chunk
-    return wrapped_generator, lambda: "".join(full_response_chunks)
+
 
 # --- Initial Story Setup (Round 0) ---
 if st.session_state.current_round == 0:
@@ -184,26 +177,19 @@ if st.session_state.current_round == 0:
             st.session_state.story_history = [] # Clear any previous history
             st.session_state.image_urls = []
 
-            with st.spinner("📜 Generating story introduction... Please wait."):
-                plot_stream_gen = generate_initial_plot_stream(st.session_state.character, st.session_state.theme)
-                display_stream, get_full_plot = stream_and_capture(plot_stream_gen)
-                
-                # Displaying the plot as it streams
-                # We'll add it to history *after* it's fully generated and captured.
-                # For now, let's just generate and capture it.
-                # The actual display will happen in the 'else' block after rerun.
-                
-                # Capture the full plot
-                # This part needs to run the generator to completion
-                temp_plot_display = st.empty()
-                streamed_content_list = []
-                for chunk in display_stream():
-                    streamed_content_list.append(chunk)
-                    temp_plot_display.markdown("".join(streamed_content_list))
-                initial_plot_content = "".join(streamed_content_list)
-                temp_plot_display.empty() # Clear the temporary display
+            with st.spinner("⏳ Creating the story plot for you..."):
+                initial_plot_content = generate_initial_plot_blocking(
+                    st.session_state.character, 
+                    st.session_state.theme
+                )
+            
+            if initial_plot_content:
+                st.session_state.story_history.append({'type': 'plot', 'content': initial_plot_content})
+            else:
+                st.error("💥 Apologies! The AI couldn't generate the initial plot. Please try again.")
+                # Optionally, prevent moving to next round if plot fails
+                st.stop() # Stop further execution in this script run
 
-            st.session_state.story_history.append({'type': 'plot', 'content': initial_plot_content})
 
             with st.spinner("🎨 Generating first comic panel..."):
                 image_url = generate_comic_image(initial_plot_content)
@@ -306,5 +292,8 @@ else:
             st.info("Your comic panels will appear here as the story unfolds!")
         
         for idx, img_url in enumerate(st.session_state.image_urls):
-            st.image(img_url, caption=f"Panel {idx + 1}", use_column_width=True)
+            if img_url:
+                st.image(img_url, caption=f"Panel {idx + 1}", use_column_width=True)
+            else:
+                st.warning(f"😢 Panel {idx + 1} could not be generated.")
             st.markdown("---")
