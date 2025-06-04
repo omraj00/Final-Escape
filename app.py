@@ -247,50 +247,59 @@ else:
                     else:
                         st.warning("❗ Please tell us what happens next!")
             
-            # AI Response Generation (triggered after user input is added and rerun)
+            # AI Response and Image Generation (triggered after user input is added and rerun)
             if st.session_state.generating_ai_response and st.session_state.story_history[-1]['type'] == 'user':
-                with st.spinner(f"🤖 AI is crafting the next part of {st.session_state.character}'s story..."):
-                    # Prepare history string for the AI prompt
-                    history_for_prompt = format_story_history([item['content'] for item in st.session_state.story_history])
-                    latest_user_input = st.session_state.story_history[-1]['content']
+                latest_user_input = st.session_state.story_history[-1]['content']
+                history_for_prompt = format_story_history([item['content'] for item in st.session_state.story_history])
+                ai_response_content = "" # Initialize
 
-                    ai_stream_gen = generate_continuation_stream(
-                        history_for_prompt,
-                        latest_user_input,
-                        st.session_state.character,
-                        st.session_state.theme,
-                        st.session_state.description
-                    )
-                    
-                    # Stream and capture AI response
-                    # We will display it directly using st.write_stream and then save it
-                    ai_response_placeholder = st.empty() # Create a placeholder for the streaming output
-                    
-                    # This is where the AI response will be streamed directly to the UI
-                    # And also captured for history and image generation
-                    streamed_content_list = []
-                    for chunk in ai_stream_gen: # ai_stream_gen is the raw generator
-                        streamed_content_list.append(chunk)
-                        ai_response_placeholder.markdown("".join(streamed_content_list))
-                    ai_response_content = "".join(streamed_content_list)
-
-                # Add full AI response to history
-                st.session_state.story_history.append({'type': 'ai', 'content': ai_response_content})
+                try:
+                    # --- AI Text Generation (in col1_story) ---
+                    with col1_story:
+                        st.markdown("**AI's Turn:**")
+                        ai_response_placeholder = st.empty()
+                        with st.spinner(f"✍️ AI is crafting the story's continuation (Round {st.session_state.current_round})..."):
+                            ai_stream_gen = generate_continuation_stream(
+                                history_for_prompt,
+                                latest_user_input,
+                                st.session_state.character,
+                                st.session_state.theme,
+                                st.session_state.description
+                            )
+                            full_response_chunks = []
+                            for chunk in ai_stream_gen:
+                                full_response_chunks.append(chunk)
+                                ai_response_placeholder.markdown("".join(full_response_chunks) + "▌")
+                            ai_response_content = "".join(full_response_chunks)
+                            ai_response_placeholder.markdown(ai_response_content)
+                        
+                        if ai_response_content: # Check if AI generated something
+                            st.session_state.story_history.append({'type': 'ai', 'content': ai_response_content})
+                        else:
+                            st.error("The AI didn't return a response this round. Please try continuing again.")
+                            # Don't proceed to image generation or increment round if AI fails
+                            st.session_state.generating_ai_response = False
+                            st.experimental_rerun()
+                            st.stop() # Stop further execution for this run
+                        
+                        # --- Image Generation (spinner in col1_story, image displayed in col2_panels) ---
+                        if ai_response_content: # Only generate image if AI response was successful
+                            with st.spinner(f"🎨 Visualizing your action for Round {st.session_state.current_round}... (Image will appear on the right)"):
+                                image_url = generate_comic_image(latest_user_input)
+                                if image_url == "error_nsfw":
+                                    st.warning(f"🎨 Your action for Round {st.session_state.current_round} was a bit too graphic for the image generator. No panel, but the story goes on!")
+                                elif isinstance(image_url, str) and image_url.startswith("error_"):
+                                    st.error(f"😢 Oops! Couldn't generate the comic panel for Round {st.session_state.current_round} due to a model error.")
+                                elif image_url:
+                                    st.session_state.image_urls.append(image_url)
+                                else:
+                                    st.error(f"😢 Oops! Couldn't generate the comic panel for Round {st.session_state.current_round}. The model returned no image.")
                 
-                with st.spinner(f"🎨 Generating comic panel for Round {st.session_state.current_round}..."):
-                    image_url = generate_comic_image(ai_response_content) # Use AI response for image
-                    if image_url == "error_nsfw":
-                        st.warning(f"🎨 The AI's response for Round {st.session_state.current_round} was a bit too graphic for the image generator. No panel, but the story goes on!")
-                    elif isinstance(image_url, str) and image_url.startswith("error_"):
-                        st.error(f"😢 Oops! Couldn't generate the comic panel for Round {st.session_state.current_round} due to a model error.")
-                    elif image_url: # Check if it's a valid URL (truthy string)
-                        st.session_state.image_urls.append(image_url)
-                    else: # None or empty output from model
-                        st.error(f"😢 Oops! Couldn't generate the comic panel for Round {st.session_state.current_round}. The model returned no image.")
-                
-                st.session_state.current_round += 1
-                st.session_state.generating_ai_response = False # Reset flag
-                st.experimental_rerun()
+                finally:
+                    if ai_response_content: # Only increment round if AI was successful
+                        st.session_state.current_round += 1
+                    st.session_state.generating_ai_response = False # Reset flag
+                    st.experimental_rerun() # Rerun to reflect all changes (text, image, round number)
 
         elif st.session_state.current_round > 10:
             st.success("🎉 Congratulations! Your 10-round comic story is complete!")
