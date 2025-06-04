@@ -13,13 +13,13 @@ load_dotenv()
 
 # Define theme descriptions
 THEME_DESCRIPTIONS = {
-    "Final Destination": "Death has a plan — and your character is in its path. Each move by the user brings danger, but the AI must twist fate and keep them alive. Expect close calls, clever saves, and suspense at every step.",
-    "Survival": "Nature shows no mercy. Your character is being hunted — not by a person, but by the world itself. From collapsing caves to monster ambushes, the AI launches life-threatening events. The user must fight to keep the story (and character) alive.",
-    "Superhero Tale": "Behind every mask is a secret. Dive into the double life of a hero blessed (or cursed) with powers, fighting not just crime but personal battles. Supervillains rise. Cities fall. And one hero stands in the middle.",
-    "Fantasy Adventure": "Step into a world where dragons fly, spells crackle in the air, and ancient maps lead to hidden realms. Magic pulses through every tree and stone — and your character is about to set foot on a quest that will test their courage, wits, and heart.",
-    "Mystery": "Whispers in the dark. Clues in plain sight. Someone is hiding the truth — and your character is on the trail. In a world filled with riddles and red herrings, only sharp minds and sharper instincts will survive.",
-    "Slice of Life": "Sometimes, the quietest moments say the most. Follow your character through life’s small joys, awkward stumbles, and deep connections. From classrooms to coffee shops, this is a story about being human — honest, funny, and real.",
-    "Sci-Fi Journey": "Rocket through galaxies, hack into alien tech, and face decisions that shape the fate of civilizations. From abandoned space stations to worlds ruled by AIs, your character must navigate the future — one jump at a time."
+    "Final Destination": "Death has a plan — your character is in its path, and each user move brings danger as the AI twists fate to keep them alive.",
+    "Survival": "Nature turns hostile — from cave-ins to monster attacks, the AI throws threats while the user fights to survive.",
+    "Superhero Tale": "A hero with powers battles crime, supervillains, and inner demons in a city on the edge.",
+    "Fantasy Adventure": "Dragons, spells, and ancient quests — your character faces a magical world that tests their courage and heart.",
+    "Mystery": "Secrets, clues, and danger — your character follows a twisting trail to uncover hidden truths.",
+    "Slice of Life": "In everyday moments, your character finds meaning, humor, and connection — simple, honest, and real.",
+    "Sci-Fi Journey": "Through alien tech and galactic threats, your character shapes the future across worlds ruled by machines."
 }
 
 # Initialize session state variables
@@ -197,7 +197,7 @@ if st.session_state.current_round == 0:
 
 
             with st.spinner("🎨 Generating first comic panel..."):
-                image_url = generate_comic_image(initial_plot_content)
+                image_url = generate_comic_image(st.session_state.character, initial_plot_content)
                 if image_url:
                     st.session_state.image_urls.append(image_url)
             
@@ -208,7 +208,7 @@ if st.session_state.current_round == 0:
 
 # --- Story Continuation (Rounds 1-10) ---
 else:
-    col1_story, col2_panels = st.columns([2,1]) # Adjusted column ratio
+    col1_story, col2_panels = st.columns([4,3]) # Adjusted column ratio
 
     with col1_story:
         st.subheader("📜 Story Progress")
@@ -272,7 +272,7 @@ else:
                 st.session_state.story_history.append({'type': 'ai', 'content': ai_response_content})
                 
                 with st.spinner(f"🎨 Generating comic panel for Round {st.session_state.current_round}..."):
-                    image_url = generate_comic_image(ai_response_content) # Use AI response for image
+                    image_url = generate_comic_image(st.session_state.character, ai_response_content, latest_user_input) # Use AI and user response for image
                     if image_url:
                         st.session_state.image_urls.append(image_url)
                 
@@ -293,7 +293,7 @@ else:
                 st.experimental_rerun()
 
     with col2_panels:
-        st.subheader("🖼️ Comic Panels")
+        st.subheader("🖼️ Comic Panel")
         if not st.session_state.image_urls:
             st.info("Your comic panels will appear here as the story unfolds!")
         

@@ -154,22 +154,39 @@ def generate_continuation_stream(history_for_prompt, latest_user_input, characte
     
     return _create_chain_stream_generator(story_chain, inputs, token_queue)
 
-def generate_comic_image(prompt):
+
+def generate_comic_image(character_name, ai_response_prompt, user_input_prompt=None):
     model = "iwasrobbed/sdxl-suspense:2717cb6a3d2505d13e1e05ba16cbfe188f86609b9060b785220d3c30cefe6242"
-    
-    # The new model might have different input parameters.
-    # Based on your example, it primarily uses "prompt".
-    # You might need to adjust this further based on the model's specific schema on Replicate.
+    # model = "stability-ai/stable-diffusion-3"
+    # model = "stability-ai/sdxl:610dddf033f10431b1b55f24510b6009fcba23017ee551a1b9afbc4eec79e29c"
+
+    # prompt_text = (
+    #     f"A comic panel in the style of TOK, featuring the character {character_name}.\n"
+    #     f"Scene description: \"{ai_response_prompt}\""
+    # )
+
+    # input_params = {
+    #     "width": 768,
+    #     "height": 768,
+    #     "prompt": prompt_text,
+    #     "refine": "expert_ensemble_refiner",
+    #     "apply_watermark": False,
+    #     "num_inference_steps": 40,
+    #     "prompt_strength": 0.8,
+    #     "guidance_scale": 20,
+    # }
+
     input_params = {
-        "prompt": f"A comic panel in the style of TOK, depicting: {prompt}"
+        "prompt": f"A comic panel in the style of TOK, depicting: {ai_response_prompt}"
     }
-    
-    output = replicate.run(
-        model,
-        input=input_params
-    )
-    
-    return output[0] if output else None
+
+    try:
+        output = replicate.run(model, input=input_params)
+        return output[0] if output else None
+    except Exception as e:
+        print("Image generation failed:", e)
+        return None
+
 
 def format_story_history(history_list):
     """Formats the story history list into a single string for AI context."""
