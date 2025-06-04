@@ -13,11 +13,13 @@ load_dotenv()
 
 # Define theme descriptions
 THEME_DESCRIPTIONS = {
-    "Fantasy Adventure": "Embark on a magical journey with mythical creatures, enchanted forests, and epic quests in a world where magic rules.",
-    "Sci-Fi Journey": "Explore the vast cosmos, encounter alien civilizations, and discover advanced technology in a futuristic setting.",
-    "Superhero Tale": "Follow the journey of extraordinary individuals with special powers as they battle villains and save the world.",
-    "Mystery": "Unravel secrets, solve puzzles, and investigate strange occurrences in a world full of intrigue and suspense.",
-    "Slice of Life": "Experience everyday moments, relationships, and personal growth in a relatable and heartwarming narrative."
+    "Final Destination": "Death has a plan — and your character is in its path. Each move by the user brings danger, but the AI must twist fate and keep them alive. Expect close calls, clever saves, and suspense at every step.",
+    "Survival": "Nature shows no mercy. Your character is being hunted — not by a person, but by the world itself. From collapsing caves to monster ambushes, the AI launches life-threatening events. The user must fight to keep the story (and character) alive.",
+    "Superhero Tale": "Behind every mask is a secret. Dive into the double life of a hero blessed (or cursed) with powers, fighting not just crime but personal battles. Supervillains rise. Cities fall. And one hero stands in the middle.",
+    "Fantasy Adventure": "Step into a world where dragons fly, spells crackle in the air, and ancient maps lead to hidden realms. Magic pulses through every tree and stone — and your character is about to set foot on a quest that will test their courage, wits, and heart.",
+    "Mystery": "Whispers in the dark. Clues in plain sight. Someone is hiding the truth — and your character is on the trail. In a world filled with riddles and red herrings, only sharp minds and sharper instincts will survive.",
+    "Slice of Life": "Sometimes, the quietest moments say the most. Follow your character through life’s small joys, awkward stumbles, and deep connections. From classrooms to coffee shops, this is a story about being human — honest, funny, and real.",
+    "Sci-Fi Journey": "Rocket through galaxies, hack into alien tech, and face decisions that shape the fate of civilizations. From abandoned space stations to worlds ruled by AIs, your character must navigate the future — one jump at a time."
 }
 
 # Initialize session state variables
@@ -137,6 +139,7 @@ with st.sidebar:
         st.markdown(f"**Character:** {st.session_state.character}")
     if st.session_state.theme:
         st.markdown(f"**Theme:** {st.session_state.theme}")
+        st.markdown(f"**Description:** {THEME_DESCRIPTIONS[st.session_state.theme]}")
     if st.session_state.character and st.session_state.theme:
         st.markdown("---")
     
@@ -173,6 +176,7 @@ if st.session_state.current_round == 0:
             st.session_state.email = email
             st.session_state.character = character
             st.session_state.theme = theme
+            st.session_state.description = THEME_DESCRIPTIONS[theme]
             
             st.session_state.story_history = [] # Clear any previous history
             st.session_state.image_urls = []
@@ -180,7 +184,8 @@ if st.session_state.current_round == 0:
             with st.spinner("⏳ Creating the story plot for you..."):
                 initial_plot_content = generate_initial_plot_blocking(
                     st.session_state.character, 
-                    st.session_state.theme
+                    st.session_state.theme,
+                    st.session_state.description
                 )
             
             if initial_plot_content:
@@ -247,7 +252,8 @@ else:
                         history_for_prompt,
                         latest_user_input,
                         st.session_state.character,
-                        st.session_state.theme
+                        st.session_state.theme,
+                        st.session_state.description
                     )
                     
                     # Stream and capture AI response

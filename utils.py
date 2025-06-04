@@ -53,7 +53,7 @@ def _create_chain_stream_generator(chain: LLMChain, inputs: dict, token_queue: Q
 
 load_dotenv()
 
-def generate_initial_plot_blocking(character, theme):
+def generate_initial_plot_blocking(character, theme, description):
     """Generates the initial story plot as a complete string (blocking)."""
     token_queue = Queue()
     llm = ChatOpenAI(
@@ -62,19 +62,20 @@ def generate_initial_plot_blocking(character, theme):
         callbacks=[TokenStreamCallbackHandler(token_queue)]
     )
     
-    template = """You are a creative storyteller. Craft an intriguing opening for a comic story.
-    The story features a character named {character} and revolves around the theme of {theme}.
-    Introduce the setting and {character}, and hint at an impending event or challenge related to the {theme}.
-    Keep the plot engaging and around 100-150 words.
-
+    template = """You are a creative storyteller. Craft a clear and engaging opening for a comic story.
+    Main character: {character}  
+    Theme: {theme}  
+    Story description: {description}
+    Describe the setting in a simple and vivid way. Introduce {character} naturally, based on the theme and description. Use clear, simple English and short sentences that are easy to follow. End the scene with a hint of a problem, mystery, or challenge that connects to the description.
+    Keep the story between 100 and 120 words. The tone should be visual and easy to imagine, like the first page of a comic story.
     Story Opening:"""
-    
+        
     prompt = PromptTemplate(
-        input_variables=["character", "theme"],
+        input_variables=["character", "theme", "description"],
         template=template
     )
     story_chain = LLMChain(llm=llm, prompt=prompt)
-    inputs = {"character": character, "theme": theme}
+    inputs = {"character": character, "theme": theme, "description": description}
 
     # Run in a thread so UI doesn't freeze, but collect all tokens here
     thread = threading.Thread(target=lambda: story_chain.run(inputs))
@@ -94,7 +95,7 @@ def generate_initial_plot_blocking(character, theme):
     thread.join()
     return "".join(full_response_chunks)
 
-def generate_initial_plot_stream(character, theme):
+def generate_initial_plot_stream(character, theme, description):
     """Generates the initial story plot as a stream of tokens using callbacks."""
     token_queue = Queue()
     llm = ChatOpenAI(
@@ -103,11 +104,12 @@ def generate_initial_plot_stream(character, theme):
         callbacks=[TokenStreamCallbackHandler(token_queue)]
     )
     
-    template = """You are a creative storyteller. Craft an intriguing opening for a comic story.
-    The story features a character named {character} and revolves around the theme of {theme}.
-    Introduce the setting and {character}, and hint at an impending event or challenge related to the {theme}.
-    Keep the plot engaging and around 100-150 words.
-
+    template = """You are a creative storyteller. Craft a clear and engaging opening for a comic story.
+    Main character: {character}  
+    Theme: {theme}  
+    Story description: {description}
+    Describe the setting in a simple and vivid way. Introduce {character} naturally, based on the theme and description. Use clear, simple English and short sentences that are easy to follow. End the scene with a hint of a problem, mystery, or challenge that connects to the description.
+    Keep the story between 100 and 120 words. The tone should be visual and easy to imagine, like the first page of a comic story.
     Story Opening:"""
     
     prompt = PromptTemplate(
@@ -119,7 +121,7 @@ def generate_initial_plot_stream(character, theme):
     
     return _create_chain_stream_generator(story_chain, inputs, token_queue)
 
-def generate_continuation_stream(history_for_prompt, latest_user_input, character, theme):
+def generate_continuation_stream(history_for_prompt, latest_user_input, character, theme, description):
     """Generates story continuation as a stream of tokens using callbacks."""
     token_queue = Queue()
     llm = ChatOpenAI(
@@ -128,28 +130,24 @@ def generate_continuation_stream(history_for_prompt, latest_user_input, characte
         callbacks=[TokenStreamCallbackHandler(token_queue)]
     )
     
-    template = """You are a creative storyteller. Continue the story based on the history and the main character's latest action.
-    
-    Story Background:
-    - Main Character: {character}
-    - Theme: {theme}
-    
-    Story So Far:
-    {history_for_prompt}
-    
+    template = """You are a creative storyteller continuing a comic-style story in clear and simple English. Your task is to respond directly to the main character’s latest action and push the story forward, using the theme to guide your tone and choices.
+    Main Character: {character}  
+    Theme: {theme}  
+    Theme Description (use this to guide your style and what should happen): {description}
+    Story So Far: {history_for_prompt}
     {character}'s Latest Action: {latest_user_input}
-    
-    Your Continuation (respond directly to {character}'s action, be creative, engaging, and keep it around 100-150 words):
+    Your Response: Continue the story in 60-80 words. Respond naturally to {character}'s latest move. Let the events reflect the theme — whether it’s saving the character, putting them in danger, uncovering mystery, or exploring emotions. Be visual, engaging, and leave the story open for the next step.
     """
     
     prompt = PromptTemplate(
-        input_variables=["character", "theme", "history_for_prompt", "latest_user_input"],
+        input_variables=["character", "theme", "description", "history_for_prompt", "latest_user_input"],
         template=template
     )
     story_chain = LLMChain(llm=llm, prompt=prompt)
     inputs = {
         "character": character,
         "theme": theme,
+        "description": description,
         "history_for_prompt": history_for_prompt,
         "latest_user_input": latest_user_input
     }
