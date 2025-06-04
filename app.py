@@ -198,8 +198,14 @@ if st.session_state.current_round == 0:
 
             with st.spinner("🎨 Generating first comic panel..."):
                 image_url = generate_comic_image(initial_plot_content)
-                if image_url:
+                if image_url == "error_nsfw":
+                    st.warning("🎨 The story opening was a bit too graphic for the image generator. No comic panel this time, but the story continues!")
+                elif isinstance(image_url, str) and image_url.startswith("error_"):
+                    st.error("😢 Oops! Couldn't generate the first comic panel due to a model error.")
+                elif image_url: # Check if it's a valid URL (truthy string)
                     st.session_state.image_urls.append(image_url)
+                else: # None or empty output from model
+                    st.error("😢 Oops! Couldn't generate the first comic panel. The model returned no image.")
             
             st.session_state.current_round = 1
             st.experimental_rerun()
@@ -208,7 +214,7 @@ if st.session_state.current_round == 0:
 
 # --- Story Continuation (Rounds 1-10) ---
 else:
-    col1_story, col2_panels = st.columns([2,1]) # Adjusted column ratio
+    col1_story, col2_panels = st.columns([4,3]) # Adjusted column ratio
 
     with col1_story:
         st.subheader("📜 Story Progress")
@@ -273,8 +279,14 @@ else:
                 
                 with st.spinner(f"🎨 Generating comic panel for Round {st.session_state.current_round}..."):
                     image_url = generate_comic_image(ai_response_content) # Use AI response for image
-                    if image_url:
+                    if image_url == "error_nsfw":
+                        st.warning(f"🎨 The AI's response for Round {st.session_state.current_round} was a bit too graphic for the image generator. No panel, but the story goes on!")
+                    elif isinstance(image_url, str) and image_url.startswith("error_"):
+                        st.error(f"😢 Oops! Couldn't generate the comic panel for Round {st.session_state.current_round} due to a model error.")
+                    elif image_url: # Check if it's a valid URL (truthy string)
                         st.session_state.image_urls.append(image_url)
+                    else: # None or empty output from model
+                        st.error(f"😢 Oops! Couldn't generate the comic panel for Round {st.session_state.current_round}. The model returned no image.")
                 
                 st.session_state.current_round += 1
                 st.session_state.generating_ai_response = False # Reset flag

@@ -154,6 +154,8 @@ def generate_continuation_stream(history_for_prompt, latest_user_input, characte
     
     return _create_chain_stream_generator(story_chain, inputs, token_queue)
 
+from replicate.exceptions import ModelError
+
 def generate_comic_image(prompt):
     model = "iwasrobbed/sdxl-suspense:2717cb6a3d2505d13e1e05ba16cbfe188f86609b9060b785220d3c30cefe6242"
     
@@ -164,12 +166,21 @@ def generate_comic_image(prompt):
         "prompt": f"A comic panel in the style of TOK, depicting: {prompt}"
     }
     
-    output = replicate.run(
-        model,
-        input=input_params
-    )
-    
-    return output[0] if output else None
+    # print(f"DEBUG: Prompt for Replicate: {input_params['prompt']}") # For server-side debugging
+    try:
+        output = replicate.run(
+            model,
+            input=input_params
+        )
+        return output[0] if output else None
+    except ModelError as e:
+        print(f"Replicate ModelError in generate_comic_image: {e}") 
+        if "NSFW content detected" in str(e):
+            return "error_nsfw" 
+        return "error_model" # Generic model error
+    except Exception as e:
+        print(f"Unexpected error in generate_comic_image: {e}")
+        return "error_unknown"
 
 def format_story_history(history_list):
     """Formats the story history list into a single string for AI context."""
